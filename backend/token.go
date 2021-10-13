@@ -11,38 +11,17 @@ import (
 )
 
 var (
-	UsernameNotFound = errors.New("Username not found")
 	UsernamePasswordMismatch = errors.New("Invalid password for this user")
-	// TODO: add errors for password not meeting constraints
 )
 
 // Returns nil if valid, otherwise returns error
 func validateUsernamePassword(username string, password string) error {
-	// TODO: backend.GetUser(username string)
-	rows, err := db.Query(
-		"SELECT password_hash FROM users WHERE username = ?", 
-		username)
+	user, err := GetUserBy(QueryTypeUsername, username, true)
 	if err != nil {
-		log.Panic(err)
-	}
-	defer rows.Close()
-
-	if !rows.Next() {
-		if err != nil {
-			log.Panic(rows.Err())
-		} else {
-			return UsernameNotFound
-		}
+		return err
 	}
 
-	var dbHash []byte
-	err = rows.Scan(&dbHash)
-	if err != nil {
-		log.Panic(err)
-	}
-
-	// TODO: change hashpassword error 
-	err = bcrypt.CompareHashAndPassword(dbHash, []byte(password)) 
+	err = bcrypt.CompareHashAndPassword(user.PasswordHash, []byte(password)) 
 	if err == nil {
 		return nil
 	} else if err == bcrypt.ErrMismatchedHashAndPassword {
@@ -54,7 +33,7 @@ func validateUsernamePassword(username string, password string) error {
 	panic("unreachable")
 }
 
-func CreateNewToken(username string, password string, location string) (string, error) {
+func CreateToken(username string, password string, location string) (string, error) {
 	err := validateUsernamePassword(username, password)
 	if err != nil {
 		return "", err

@@ -30,7 +30,7 @@ func newToken(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 
 	log.Println("Attempt to create new token: username='" + username + "', password=REDACTED, location='" + location + "'")
 
-	token, err := backend.CreateNewToken(username, password, location)
+	token, err := backend.CreateToken(username, password, location)
 	if err != nil {
 		log.Println("Token creation failed: ", err)
 		// TODO: bad request vs forbidden
