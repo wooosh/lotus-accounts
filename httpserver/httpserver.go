@@ -1,14 +1,16 @@
-package main
+package httpserver
 
 import (
 	"fmt"
 	"log"
 	"net/http"
 
+	"lotusaccounts/backend"
+
 	"github.com/julienschmidt/httprouter"
 )
 
-func Index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	log.Print("request")
 	fmt.Fprint(w, "Hello\n")
 }
@@ -26,25 +28,26 @@ func newToken(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		location = r.RemoteAddr + " " + r.UserAgent()
 	}
 
-	log.Print("Attempt to create new token: username='" + username + "', password=REDACTED, location='" + location + "'")
+	log.Println("Attempt to create new token: username='" + username + "', password=REDACTED, location='" + location + "'")
 
-	token, err := createNewToken(username, password, location)
+	token, err := backend.CreateNewToken(username, password, location)
 	if err != nil {
-		log.Print("Token creation failed: ", err)
+		log.Println("Token creation failed: ", err)
 		// TODO: bad request vs forbidden
 		w.WriteHeader(http.StatusForbidden)
 		// TODO: show error only if it is an expected error
 		fmt.Fprintln(w, "Forbidden:", err)
 	} else {
+		log.Println("Token creation succesful")
 		fmt.Fprint(w, token)
 	}
 }
 
-func httpServer() {
+func Start() {
 	// TODO: error recovery middleware
 	log.Print("Starting HTTP server")
 	router := httprouter.New()
-	router.GET("/", Index)
+	router.GET("/", index)
 	router.POST("/api/new_token", newToken)
 
 	// TODO: serve on unix domain socket

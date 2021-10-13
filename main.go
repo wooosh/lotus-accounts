@@ -2,17 +2,21 @@ package main
 
 import (
 	"os"
+
+	"lotusaccounts/backend"
+	"lotusaccounts/cli"
+	"lotusaccounts/httpserver"
 )
 
 func main() {
-	openDb()
+	backend.OpenDb()
 
-	// Handle cli args
+	// Run http server if no arguments given
 	if len(os.Args) == 1 {
-		httpServer()
+		httpserver.Start()
 	} else {
-		handleCli()
+		cli.Cli()
 	}
 
-	closeDb()
+	backend.CloseDb()
 }	

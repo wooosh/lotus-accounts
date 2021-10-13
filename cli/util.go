@@ -1,9 +1,7 @@
-package main
+package cli
 
 import (
 	"fmt"
-	"os"
-	"log"
 	"strings"
 )
 
@@ -38,26 +36,3 @@ func cliAskText(prompt string, verifier func(input string) error) string {
 		}
 	}
 }
-
-func cliNewUser() {
-	username := cliAskText("username", validateNewUsername)
-	password := cliAskText("password", validateNewPassword)
-	is_admin := cliYesNo("is this an admin account?")
-
-	dbNewUser(username, password, is_admin)
-}
-
-func handleCli() {
-	switch mode := os.Args[1]; mode {
-	case "new-user":
-		cliNewUser()	
-	case "delete-user":
-		log.Fatal("Not implemented")
-	case "list-users":
-		log.Fatal("Not implemented")
-	case "edit-user":
-		log.Fatal("Not implemented")
-	default:
-		log.Fatal("Unknown mode " + mode)
-	}
-}	

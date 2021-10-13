@@ -1,4 +1,4 @@
-module authserver
+module lotusaccounts
 
 go 1.17
 
