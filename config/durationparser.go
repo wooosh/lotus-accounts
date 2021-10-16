@@ -41,6 +41,19 @@ func skipEmpty(strs []string) []string {
 	return result
 }
 
+type ErrInvalidUnit struct {
+	Unit string
+}
+
+func (e *ErrInvalidUnit) Error() string {
+	return "invalid time unit '" + e.Unit + "'"
+}
+
+var (
+	ErrDurationMalformed = errors.New("cannot parse malformed duration string")
+	ErrDurationOrdering  = errors.New("durations must be given in descending order with no units repeated")
+)
+
 // TODO: unit tests
 // Format is defined in the default config.toml
 func (d *configDuration) UnmarshalText(text []byte) error {
@@ -53,7 +66,7 @@ func (d *configDuration) UnmarshalText(text []byte) error {
 
 	// We need a minimum of two sections (number and unit) for a duration string
 	if len(sections) < 2 {
-		return errors.New("cannot parse duration string '" + str + "'")
+		return ErrDurationMalformed
 	}
 
 	for len(sections) >= 2 {
@@ -67,12 +80,12 @@ func (d *configDuration) UnmarshalText(text []byte) error {
 
 		unitTime, ok := timeUnits[unitStr]
 		if !ok {
-			return errors.New("invalid time unit '" + sections[1] + "'")
+			return &ErrInvalidUnit{sections[1]}
 		}
 
 		// Disallow durations given in non-descending order, and multiple of the same unit
 		if unitTime >= previousUnit {
-			return errors.New("durations must be given in descending order with no units repeated")
+			return ErrDurationOrdering
 		}
 		previousUnit = unitTime
 
@@ -83,7 +96,7 @@ func (d *configDuration) UnmarshalText(text []byte) error {
 
 	// The above loop should consume all sections, otherwise there will still be text remaining to be parsed
 	if len(sections) != 0 {
-		return errors.New("unexpected eof in '" + str + "'")
+		return ErrDurationMalformed
 	}
 
 	return nil
