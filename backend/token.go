@@ -1,17 +1,17 @@
 package backend
 
 import (
-	"log"
-	"errors"
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
+	"log"
 
-	"golang.org/x/crypto/bcrypt"
 	_ "github.com/mattn/go-sqlite3"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var (
-	UsernamePasswordMismatch = errors.New("Invalid password for this user")
+	ErrUsernamePasswordMismatch = errors.New("invalid password for this user")
 )
 
 // Returns nil if valid, otherwise returns error
@@ -21,12 +21,13 @@ func validateUsernamePassword(username string, password string) error {
 		return err
 	}
 
-	err = bcrypt.CompareHashAndPassword(user.PasswordHash, []byte(password)) 
+	err = bcrypt.CompareHashAndPassword(user.PasswordHash, []byte(password))
 	if err == nil {
 		return nil
 	} else if err == bcrypt.ErrMismatchedHashAndPassword {
-		return UsernamePasswordMismatch
+		return ErrUsernamePasswordMismatch
 	} else {
+		// TODO: should i use log or panic here?
 		// Unknown bcrypt error
 		log.Panic(err)
 	}

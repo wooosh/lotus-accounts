@@ -1,10 +1,12 @@
 package backend
 
 import (
+	"errors"
 	"fmt"
 	"log"
-	"errors"
+	"lotusaccounts/config"
 	"regexp"
+	"strings"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -16,30 +18,34 @@ func hashPassword(password string) ([]byte, error) {
 }
 
 var (
-	ErrUsernameLength = errors.New("Username must be between 3 and 24 characters long")
-	ErrUsernameInvalidChars = errors.New("Username cannot contain non-alphanumeric/underscore characters")
-	ErrUsernameAlreadyInUse = errors.New("Username already in use")
-	
+	ErrUsernameLength       = errors.New("username must be between 3 and 24 characters long")
+	ErrUsernameInvalidChars = errors.New("username cannot contain non-alphanumeric/underscore characters")
+	ErrUsernameAlreadyInUse = errors.New("username already in use")
+
 	usernameAllowedCharsRegex = regexp.MustCompile("^[a-zA-Z0-9_]*$")
 )
+
 // TODO: unit tests
 
+// Checks if a username is a valid name for a new account
+// TODO: TOCTOU error
 func ValidateNewUsername(username string) error {
-	// TODO: check if username already exists in DB
+	// Ensure username is a reasonable length
 	if !(3 <= len(username) && len(username) <= 24) {
 		return ErrUsernameLength
 	}
 
-	// TODO: only compile once
+	// Ensure the username is composed of only alphanumeric chars and underscores
 	if !usernameAllowedCharsRegex.MatchString(username) {
 		return ErrUsernameInvalidChars
 	}
 
+	// Ensure username is not already taken
 	_, err := GetUserBy(QueryTypeUsername, username, false)
 	if err == nil {
 		return ErrUsernameAlreadyInUse
 	} else if err != ErrUserNotFound {
-		// TODO: send appropriate http code when server panics
+		// TODO: send appropriate http code and message when server panics
 		log.Panic(err)
 	}
 
@@ -47,22 +53,47 @@ func ValidateNewUsername(username string) error {
 }
 
 var (
-	ErrPasswordLength = errors.New("Password must be between 8 and 256 characters long")
+	ErrPasswordLength              = errors.New("password must be between 8 and 256 characters long")
+	ErrPasswordLacksSpecialChars   = errors.New("password must have atleast one of the following special characters:  !\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~")
+	ErrPasswordLacksCapitalization = errors.New("password must have atleast one lowercase and one uppercase letter")
+	ErrPasswordLacksNumber         = errors.New("password must have atleast one number")
+
+	uppercaseRegex = regexp.MustCompile("[[:upper:]]")
+	lowercaseRegex = regexp.MustCompile("[[:lower:]]")
 )
 
+// TODO: unit test
+// Check if a password meets the requirements defined in the config
 func ValidateNewPassword(password string) error {
-	if !(8 <= len(password) && len(password) <= 256) {
+	// Ensure password is between length limits
+	if !(config.Config.Password.MinLength <= len(password) &&
+		len(password) <= config.Config.Password.MaxLength) {
 		return ErrPasswordLength
 	}
 
-	// TODO: determine if more password requirements (require numbers, special
-	// chars, capitalization) would be beneficial. maybe have options in
-	// the config
+	// Ensure password contains special characters if it is required by the config
+	if config.Config.Password.RequireSpecialCharacters &&
+		!strings.ContainsAny(password, " !\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~") {
+		return ErrPasswordLacksSpecialChars
+	}
+
+	// Ensure password contains atleast one number if required by the config
+	if config.Config.Password.RequireLowerCaseAndUpperCase &&
+		!strings.ContainsAny(password, "0123456789") {
+		return ErrPasswordLacksNumber
+	}
+
+	// Ensure password contains one uppercase and one lowercase leter if required by the config
+	if config.Config.Password.RequireLowerCaseAndUpperCase &&
+		!(uppercaseRegex.MatchString(password) && lowercaseRegex.MatchString(password)) {
+		return ErrPasswordLacksCapitalization
+	}
 
 	return nil
 }
 
 type UserIdType int
+
 const (
 	QueryTypeUserId UserIdType = iota
 	QueryTypeUsername
@@ -79,14 +110,14 @@ func uniqueUserIdentifierFieldName(name UserIdType) string {
 	}
 }
 
-var ErrUserNotFound = errors.New("No user found with given ID/Username")
+var ErrUserNotFound = errors.New("no user found with given ID/Username")
 
 func GetUserBy(idType UserIdType, value interface{}, includePasswordHash bool) (User, error) {
 	var user User
-	
+
 	rows, err := db.Query(
-		fmt.Sprintf("SELECT id, username, is_admin, password_hash FROM users WHERE %s = ?", 
-			    uniqueUserIdentifierFieldName(idType)), 
+		fmt.Sprintf("SELECT id, username, is_admin, password_hash FROM users WHERE %s = ?",
+			uniqueUserIdentifierFieldName(idType)),
 		value)
 	if err != nil {
 		log.Panic(err)
@@ -114,18 +145,16 @@ func GetUserBy(idType UserIdType, value interface{}, includePasswordHash bool) (
 	return user, nil
 }
 
-
 func CreateUser(username string, password string, is_admin bool) error {
 	err := ValidateNewUsername(username)
 	if err != nil {
 		return err
 	}
-	
+
 	err = ValidateNewPassword(password)
 	if err != nil {
 		return err
 	}
-
 
 	hash, err := hashPassword(password)
 	if err != nil {

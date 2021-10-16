@@ -1,0 +1,49 @@
+# TODO: some of this could be editable from webui, or atleast visible there
+
+# DURATION FORMAT
+# Example: "2 years 1 month 3 days 4 seconds"
+# - supported units: second, minute, hour, day, week, month, year
+# - any of these units can have be used in the plural form (eg "months", "days")
+# - units over an hour are approximated as follows:
+#     - day   = 24 hours
+#     - week  = 7 days
+#     - month = 30 days
+#     - year  = 365 days
+# - dates must be given from longest unit to lowest, with no unit repeated
+
+# ALL COMMENTED OUT SETTINGS REPRESENT THE DEFAULTS UNLESS OTHERWISE NOTED
+
+# the domain the server is running on (TODO: explain why it needs its own domain)
+# Domain = "accounts.mydomain.com"
+
+# the location of the database
+# DatabaseLocation = "accounts.db"
+
+# these only apply to new tokens
+# the amount of time it takes for a token to expire since the users last login/use
+#LoginExpireTime = "1 week"
+# the maximum amount of time a token can be used for regardless of last login/use
+#LoginMaxRefreshTime = "6 months"
+
+[logging]
+# keep a list of IPs and user agent pairs that a token was accessed from
+#LogTokenIps = true
+
+# log each IP that has failed auth in some way (invalid/old token, wrong username/password)
+#LogFailedAuth = true
+
+# The maximum number of failed authentication log items to store, if this is
+# exceeded, TODO: figure out what happens when this is exceeded
+#MaxFailedAuth = 10_000
+
+# The amount of time failed authorization logs will be held for
+#FailedAuthRetention = "1 year"
+
+[password]
+# these settings define the requirements for NEW passwords
+#MinLength = 8
+#MaxLength = 256
+#RequireLowercaseAndUppercase = true
+#RequireSpecialChars = true
+# NIT: this setting with special chars disabled allows a number only pin
+#RequireNumber = true

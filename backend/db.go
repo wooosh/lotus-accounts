@@ -3,21 +3,22 @@ package backend
 import (
 	"database/sql"
 	"log"
+	"lotusaccounts/config"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
 type User struct {
-	Id uint64
+	Id       uint64
 	Username string
-	IsAdmin bool
+	IsAdmin  bool
 	// Will be set to "" unless specifically requested
 	PasswordHash []byte
 }
 
 type Token struct {
-	Id uint64
+	Id     uint64
 	UserId uint64
 
 	// Base64 string
@@ -30,13 +31,17 @@ type Token struct {
 
 	// Domain the token is issued for
 	Domain string
-	
+
 	Created time.Time
-	Expiry time.Time
+	Expiry  time.Time
 }
 
 const (
 	// TODO: set up unique properly
+	// TODO: CHECK() constraints where applicable
+	// TODO: set expiry -1 when force revoked
+	// TODO: make it so that getting tokens does not expose the token unless
+	// explicitly asked for similar to how hashes work
 	createTablesStmt = `
 	CREATE TABLE IF NOT EXISTS users (
 		id 		INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -53,20 +58,36 @@ const (
 		created		INTEGER NOT NULL,
 		expiry 		INTEGER NOT NULL,
 		user 		INTEGER NOT NULL,
+
 		FOREIGN KEY(user) REFERENCES users(id)
-	)
+	);
 
+	CREATE TABLE IF NOT EXISTS token_uses (
+		id		INTEGER PRIMARY KEY AUTOINCREMENT,
+		token 		INTEGER NOT NULL,
+		time		INTEGER NOT NULL,
+		ip		TEXT,
+		user_agent	TEXT,
+		success 	INTEGER NOT NULL,
+
+		FOREIGN KEY(token) REFERENCES tokens(id)
+	);
+
+	CREATE TABLE IF NOT EXISTS failed_auth (
+		id		INTEGER PRIMARY KEY AUTOINCREMENT,
+		time 		INTEGER NOT NULL,
+		username	TEXT,
+		ip		TEXT,
+		user_agent	TEXT
+	);
 	`
-
-	// TODO: default expiry time
 )
-
 
 var db *sql.DB
 
 func OpenDb() {
 	var err error
-	db, err = sql.Open("sqlite3", "auth.db")
+	db, err = sql.Open("sqlite3", config.Config.DatabaseLocation)
 	if err != nil {
 		log.Fatal(err)
 	}
